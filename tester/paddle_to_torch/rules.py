@@ -7228,7 +7228,10 @@ dtype_map = {
 }
 dtype_val = locals().get("dtype")
 torch_dtype = dtype_map.get(str(dtype_val).split(".")[-1], torch.float32)
-result = torch.normal(mean=float(mean), std=float(std), size=list(shape)).to(torch_dtype)
+# Use empty + in-place normal_ to bit-align with paddle._C_ops.gaussian
+# (Box-Muller path). torch.normal(...) functional goes through a different
+# scale/shift route and breaks bf16/fp16 alignment.
+result = torch.empty(list(shape), dtype=torch_dtype).normal_(mean=float(mean), std=float(std))
 """
         code = Code(core=core.splitlines())
         return ConvertResult.success(paddle_api, code, is_torch_corresponding=False)
